@@ -38,7 +38,8 @@ jobs:
           xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportPath build/ios -exportOptionsPlist ios/ExportOptions.plist
 
       - name: Sauvegarder l’IPA en artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: project/build/ios/ipa/*.ipa
+          compression-level: 0
