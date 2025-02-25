@@ -11,6 +11,10 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - name: Installer SVN
+        run: |
+          brew install subversion
+
       - name: Cloner le projet depuis SVN
         run: |
           echo "Téléchargement du code depuis SVN..."
