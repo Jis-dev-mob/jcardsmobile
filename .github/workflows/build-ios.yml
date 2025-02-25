@@ -39,10 +39,13 @@ jobs:
 
       - name: Désactiver la signature automatique dans Xcode
         run: |
-            cd project/ios
-            /usr/libexec/PlistBuddy -c "Set :ProvisioningStyle Manual" Runner.xcodeproj/project.pbxproj
-            /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_IDENTITY \"\"" Runner.xcodeproj/project.pbxproj
-            /usr/libexec/PlistBuddy -c "Set :DEVELOPMENT_TEAM \"\"" Runner.xcodeproj/project.pbxproj
+          cd project/ios
+          /usr/libexec/PlistBuddy -c "Add :ProvisioningStyle string Manual" Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Set :ProvisioningStyle Manual" Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Add :CODE_SIGN_IDENTITY string \"\"" Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_IDENTITY \"\"" Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Add :DEVELOPMENT_TEAM string \"\"" Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Set :DEVELOPMENT_TEAM \"\"" Runner.xcodeproj/project.pbxproj || true
 
       - name: Compiler l’application iOS
         run: |
@@ -51,22 +54,22 @@ jobs:
 
       - name: Créer ExportOptions.plist
         run: |
-            cat <<EOF > project/ios/ExportOptions.plist
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-              <key>method</key>
-              <string>release-testing</string>
-              <key>signingStyle</key>
-              <string>manual</string>
-              <key>teamID</key>
-              <string></string>
-              <key>provisioningProfiles</key>
-              <dict/>
-            </dict>
-            </plist>
-            EOF
+          cat <<EOF > project/ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>release-testing</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string></string>
+            <key>provisioningProfiles</key>
+            <dict/>
+          </dict>
+          </plist>
+          EOF
 
       - name: Générer l’IPA avec Xcode
         run: |
