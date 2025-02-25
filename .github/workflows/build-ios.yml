@@ -37,11 +37,12 @@ jobs:
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
 
-      - name: Désactiver la signature automatique
+      - name: Désactiver la signature automatique dans Xcode
         run: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project/ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' project/ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' project/ios/Runner.xcodeproj/project.pbxproj
+            cd project/ios
+            /usr/libexec/PlistBuddy -c "Set :ProvisioningStyle Manual" Runner.xcodeproj/project.pbxproj
+            /usr/libexec/PlistBuddy -c "Set :CODE_SIGN_IDENTITY \"\"" Runner.xcodeproj/project.pbxproj
+            /usr/libexec/PlistBuddy -c "Set :DEVELOPMENT_TEAM \"\"" Runner.xcodeproj/project.pbxproj
 
       - name: Compiler l’application iOS
         run: |
@@ -50,20 +51,22 @@ jobs:
 
       - name: Créer ExportOptions.plist
         run: |
-          cat <<EOF > project/ios/ExportOptions.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>ad-hoc</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict/>
-          </dict>
-          </plist>
-          EOF
+            cat <<EOF > project/ios/ExportOptions.plist
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+              <key>method</key>
+              <string>release-testing</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>teamID</key>
+              <string></string>
+              <key>provisioningProfiles</key>
+              <dict/>
+            </dict>
+            </plist>
+            EOF
 
       - name: Générer l’IPA avec Xcode
         run: |
