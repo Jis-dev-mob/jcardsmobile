@@ -23,7 +23,7 @@ jobs:
       - name: Installer Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.1
+          flutter-version: 3.7.10
           architecture: x64
 
       - name: Installer les dépendances Flutter
