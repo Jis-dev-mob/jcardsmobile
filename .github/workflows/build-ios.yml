@@ -18,7 +18,7 @@ jobs:
       - name: Cloner le projet depuis SVN
         run: |
           echo "Téléchargement du code depuis SVN..."
-          svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/jcardsmobile/ project
+          svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/teodispatchmobile/ project
 
       - name: Installer Flutter
         uses: subosito/flutter-action@v2
