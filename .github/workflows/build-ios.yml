@@ -37,6 +37,12 @@ jobs:
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
 
+      - name: Désactiver la signature automatique
+        run: |
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' project/ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' project/ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' project/ios/Runner.xcodeproj/project.pbxproj
+
       - name: Compiler l’application iOS
         run: |
           cd project
@@ -67,13 +73,13 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             archive -archivePath build/Runner.xcarchive \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE_SPECIFIER=""
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
             -exportPath build/ios \
             -exportOptionsPlist ./ExportOptions.plist \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE_SPECIFIER=""
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 
       - name: Sauvegarder l’IPA en artifact
         uses: actions/upload-artifact@v4
