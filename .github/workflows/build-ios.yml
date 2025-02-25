@@ -31,6 +31,12 @@ jobs:
           cd project
           flutter pub get
 
+      - name: Corriger la version minimale iOS
+        run: |
+          cd project/ios
+          sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
+          pod install --repo-update
+
       - name: Compiler l’application iOS
         run: |
           cd project
@@ -39,8 +45,18 @@ jobs:
       - name: Générer l’IPA avec Xcode
         run: |
           cd project/ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath build/Runner.xcarchive
-          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportPath build/ios -exportOptionsPlist ios/ExportOptions.plist
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            archive -archivePath build/Runner.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE_SPECIFIER=""
+
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportPath build/ios \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE_SPECIFIER=""
 
       - name: Sauvegarder l’IPA en artifact
         uses: actions/upload-artifact@v4
