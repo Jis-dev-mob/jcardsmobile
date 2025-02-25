@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permet de lancer manuellement le workflow
+  workflow_dispatch:
 
 jobs:
   build:
@@ -42,6 +42,23 @@ jobs:
           cd project
           flutter build ios --release --no-codesign
 
+      - name: Créer ExportOptions.plist
+        run: |
+          cat <<EOF > project/ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>ad-hoc</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict/>
+          </dict>
+          </plist>
+          EOF
+
       - name: Générer l’IPA avec Xcode
         run: |
           cd project/ios
@@ -55,7 +72,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
             -exportPath build/ios \
-            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportOptionsPlist ./ExportOptions.plist \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" PROVISIONING_PROFILE_SPECIFIER=""
 
       - name: Sauvegarder l’IPA en artifact
