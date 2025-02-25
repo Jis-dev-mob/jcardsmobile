@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch: # Permet de lancer manuellement le workflow
 
 jobs:
   build:
@@ -12,38 +12,24 @@ jobs:
 
     steps:
       - name: Installer SVN
-        run: brew install subversion
+        run: |
+          brew install subversion
 
       - name: Cloner le projet depuis SVN
         run: |
           echo "Téléchargement du code depuis SVN..."
-          svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/jhrmobile/ project
-
-      - name: Définir la version Xcode compatible
-        run: sudo xcode-select -switch /Applications/Xcode_14.3.app
+          svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/jcardsmobile/ project
 
       - name: Installer Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.7.10
+          flutter-version: 3.24.1
           architecture: x64
 
       - name: Installer les dépendances Flutter
         run: |
           cd project
           flutter pub get
-
-      - name: Désactiver l'utilisation des headers Swift avec les modules
-        run: |
-          cd project/ios
-          echo "Désactivation des headers Swift incompatibles..."
-          sed -i '' 's/MODULES/NO/' Podfile
-
-      - name: Mettre à jour les dépendances CocoaPods
-        run: |
-          cd project/ios
-          pod repo update
-          pod install --verbose
 
       - name: Compiler l’application iOS
         run: |
