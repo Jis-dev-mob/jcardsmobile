@@ -1,0 +1,44 @@
+name: iOS IPA Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Permet de lancer manuellement le workflow
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Cloner le projet depuis SVN
+        run: |
+          echo "Téléchargement du code depuis SVN..."
+          svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/jhrmobile/ project
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: stable
+
+      - name: Installer les dépendances Flutter
+        run: |
+          cd project
+          flutter pub get
+
+      - name: Compiler l’application iOS
+        run: |
+          cd project
+          flutter build ios --release --no-codesign
+
+      - name: Générer l’IPA avec Xcode
+        run: |
+          cd project/ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -sdk iphoneos -configuration Release archive -archivePath build/Runner.xcarchive
+          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportPath build/ios -exportOptionsPlist ios/ExportOptions.plist
+
+      - name: Sauvegarder l’IPA en artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-build
+          path: project/build/ios/ipa/*.ipa
