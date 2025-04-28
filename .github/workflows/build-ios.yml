@@ -1,4 +1,4 @@
-name: iOS Simulator Build
+name: iOS IPA Build for App Store
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
 
       - name: Cloner le projet depuis SVN
         run: |
-          echo "Téléchargement du code depuis SVN...."
+          echo "Téléchargement du code depuis SVN..."
           svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/crmconnect_mobile/ project
 
       - name: Installer Flutter
@@ -37,14 +37,75 @@ jobs:
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
 
-      - name: Compiler l’application iOS pour simulateur
+      - name: Décrypter le certificat et le profil de provisioning
+        run: |
+          mkdir -p certificates
+          echo "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > certificates/ios_cert.p12
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > certificates/profile.mobileprovision
+
+      - name: Installer le certificat dans le keychain
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificates/ios_cert.p12 -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -A
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Copier le profil de provisioning
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp certificates/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Compiler l’application iOS pour App Store
         run: |
           cd project
-          flutter build ios --simulator
+          flutter build ios --release
 
-      - name: Sauvegarder l’application en artifact
+      - name: Créer ExportOptions.plist pour App Store
+        run: |
+          cat <<EOF > project/ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>compileBitcode</key>
+              <true/>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>${{ secrets.APP_BUNDLE_ID }}</key>
+                  <string>${{ secrets.PROVISIONING_PROFILE_NAME }}</string>
+              </dict>
+              <key>teamID</key>
+              <string>${{ secrets.TEAM_ID }}</string>
+              <key>destination</key>
+              <string>export</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Générer l’IPA pour App Store avec Xcode
+        run: |
+          cd project/ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            archive -archivePath build/Runner.xcarchive
+
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportPath build/ios \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Sauvegarder l’IPA en artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-build
-          path: project/build/ios/iphonesimulator
+          name: ios-appstore-ipa
+          path: project/ios/build/ios/*.ipa
           compression-level: 0
