@@ -58,8 +58,8 @@ jobs:
         run: |
           openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }} \
             | openssl x509 -noout -subject -issuer -dates
-          openssl pkcs12 -in ios_cert.p12 -nodes -passin pass:TON_MDP | openssl x509 -noout -subject -issuer
-          openssl pkcs12 -in ios_cert.p12 -nodes -passin pass:TON_MDP | openssl rsa -check
+          openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:TON_MDP | openssl x509 -noout -subject -issuer
+          openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:TON_MDP | openssl rsa -check
           
       - name: Installer le certificat dans le keychain
         run: |
