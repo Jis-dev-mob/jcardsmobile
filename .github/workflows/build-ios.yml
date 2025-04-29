@@ -58,15 +58,36 @@ jobs:
         run: |
           openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }} \
             | openssl x509 -noout -subject -issuer -dates
-
-      # Extraire le certificat et la clé privée du P12
-      - name: Extraire la clé privée et le certificat
+          openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }} | openssl x509 -noout -subject -issuer
+          openssl pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }} | openssl rsa -check
+          
+      - name: Installer le certificat dans le keychain
         run: |
-          mkdir -p certificates/extracted
-          # Extraire la clé privée
-          openssl pkcs12 -in certificates/ios_cert.p12 -nodes -nocerts -out certificates/extracted/ios_private_key.pem -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          # Extraire le certificat
-          openssl pkcs12 -in certificates/ios_cert.p12 -clcerts -nokeys -out certificates/extracted/ios_certificate.pem -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          # Crée un nouveau trousseau dans le dossier temporaire
+          security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
+          # Déverrouille le trousseau
+          security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
+          # Allonge le timeout pour éviter qu'il se verrouille
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          # Définit le trousseau comme le seul actif pour éviter les conflits
+          security list-keychains -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          # Importe le certificat .p12
+          security import certificates/ios_cert.p12 \
+            -k "$KEYCHAIN_PATH" \
+            -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" \
+            -A || { echo "Erreur à l'import du certificat"; security show-keychain-info "$KEYCHAIN_PATH"; exit 1; }
+          # Autorise les outils Apple à accéder à la clé privée
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" \
+            "$KEYCHAIN_PATH"
+            
+      - name: Vérifier que le certificat est valide et installé
+        run: |
+          echo "Liste des certificats installés dans le trousseau temporaire:"
+          security find-identity -p codesigning build.keychain
 
       - name: Copier le profil de provisioning
         run: |
@@ -113,12 +134,7 @@ jobs:
             -scheme Runner \
             -sdk iphoneos \
             -configuration Release \
-            archive -archivePath build/Runner.xcarchive \
-            CODE_SIGN_IDENTITY="iPhone Distribution: JIS Computing" \
-            PROVISIONING_PROFILE="${{ secrets.PROVISIONING_PROFILE_NAME }}" \
-            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_NAME }}" \
-            CODE_SIGN_PRIVATE_KEY_FILE=certificates/extracted/ios_private_key.pem \
-            CODE_SIGN_CERTIFICATE_FILE=certificates/extracted/ios_certificate.pem
+            archive -archivePath build/Runner.xcarchive
 
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
