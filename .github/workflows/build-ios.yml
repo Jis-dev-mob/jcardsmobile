@@ -54,6 +54,10 @@ jobs:
           echo "Affichage des métadonnées du profil de provisioning:"
           security cms -D -i certificates/profile.mobileprovision | plutil -p -
 
+      - name: Vérifier le contenu du certificat
+        run: |
+          security pkcs12 -in certificates/ios_cert.p12 -nodes -passin pass:${{ secrets.IOS_CERTIFICATE_PASSWORD }} | openssl x509 -noout -subject -issuer -dates
+
       - name: Installer le certificat dans le keychain
         run: |
           security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
