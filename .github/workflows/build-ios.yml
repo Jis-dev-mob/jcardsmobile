@@ -43,6 +43,17 @@ jobs:
           printf "%s" "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > certificates/ios_cert.p12
           printf "%s" "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > certificates/profile.mobileprovision
 
+      - name: Vérifier le contenu des fichiers décodés
+        run: |
+          echo "Contenu du certificat (ios_cert.p12):"
+          file certificates/ios_cert.p12
+          echo ""
+          echo "Contenu du profil de provisioning (profile.mobileprovision):"
+          file certificates/profile.mobileprovision
+          echo ""
+          echo "Affichage des métadonnées du profil de provisioning:"
+          security cms -D -i certificates/profile.mobileprovision | plutil -p -
+
       - name: Installer le certificat dans le keychain
         run: |
           security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
@@ -50,6 +61,11 @@ jobs:
           security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
           security import certificates/ios_cert.p12 -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -A
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Vérifier que le certificat est valide et installé
+        run: |
+          echo "Liste des certificats installés dans le trousseau temporaire:"
+          security find-identity -p codesigning build.keychain
 
       - name: Copier le profil de provisioning
         run: |
