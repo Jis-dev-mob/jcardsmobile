@@ -48,7 +48,7 @@ jobs:
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import certificates/ios_cert.p12 -P "" -A
+          security import certificates/ios_cert.p12 -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -A
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
       - name: Copier le profil de provisioning
