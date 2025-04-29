@@ -45,9 +45,9 @@ jobs:
 
       - name: Installer le certificat dans le keychain
         run: |
-          security create-keychain -p "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" build.keychain
+          security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" build.keychain
+          security unlock-keychain -p "" build.keychain
           security import certificates/ios_cert.p12 -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -A
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
