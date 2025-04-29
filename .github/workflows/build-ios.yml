@@ -89,7 +89,7 @@ jobs:
           </plist>
           EOF
 
-      - name: Générer l’IPA pour App Store avec Xcode
+      - name: Générer l’IPA pour App Store avec Xcode...
         run: |
           cd project/ios
           xcodebuild -workspace Runner.xcworkspace \
