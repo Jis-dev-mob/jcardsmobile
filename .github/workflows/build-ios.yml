@@ -63,22 +63,29 @@ jobs:
           
       - name: Installer le certificat dans le keychain
         run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
-          # Crée un nouveau trousseau dans le dossier temporaire
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          # Crée un nouveau trousseau
           security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
           # Déverrouille le trousseau
           security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" "$KEYCHAIN_PATH"
-          # Allonge le timeout pour éviter qu'il se verrouille
+          # Allonge le timeout
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          # Définit le trousseau comme le seul actif pour éviter les conflits
+          # Rend le trousseau actif
           security list-keychains -s "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
-          # Importe le certificat .p12
+          # Importe le certificat .p12 avec autorisations explicites
           security import certificates/ios_cert.p12 \
             -k "$KEYCHAIN_PATH" \
             -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" \
-            -A || { echo "Erreur à l'import du certificat"; security show-keychain-info "$KEYCHAIN_PATH"; exit 1; }
-          # Autorise les outils Apple à accéder à la clé privée
+            -T /usr/bin/codesign \
+            -T /usr/bin/security \
+            -T /usr/bin/productbuild \
+            -A || {
+              echo "❌ Échec de l'import du certificat dans le keychain"
+              security show-keychain-info "$KEYCHAIN_PATH"
+              exit 1
+            }
+          # Autorise l'accès aux clés privées pour les outils Apple
           security set-key-partition-list \
             -S apple-tool:,apple: \
             -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" \
