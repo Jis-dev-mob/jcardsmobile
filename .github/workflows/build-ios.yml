@@ -53,8 +53,20 @@ jobs:
           ls -la certificates/
           echo "Taille du certificat P12: $(wc -c < certificates/ios_cert.p12) octets"
           echo "Taille du profil de provisioning: $(wc -c < certificates/profile.mobileprovision) octets"
+          
+          # Analyser le format du fichier P12
+          file certificates/ios_cert.p12
 
-      - name: Installer le certificat
+      - name: Vérifier l intégrité du certificat
+        run: |
+          # Vérifier si le fichier est un certificat P12 valide
+          file certificates/ios_cert.p12
+          
+          # Tester avec OpenSSL pour voir si le certificat est lisible
+          openssl pkcs12 -info -in certificates/ios_cert.p12 -nokeys -passin pass:123456789 -nocerts || echo "⚠️ Impossible de lire le certificat avec le mot de passe"
+
+      # Approche alternative pour l'import du certificat
+      - name: Installer le certificat manuellement
         run: |
           # Créer un nouveau keychain
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
@@ -62,33 +74,63 @@ jobs:
           security unlock-keychain -p "temp_password" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           
-          # Rendre le keychain actif
+          # Rendre le keychain actif et configurer pour ne pas demander de confirmation
           security list-keychains -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
           security default-keychain -s "$KEYCHAIN_PATH"
           
-          # Importer le certificat
-          security import certificates/ios_cert.p12 -k "$KEYCHAIN_PATH" -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -A -t cert -f pkcs12
-          security set-key-partition-list -S apple-tool:,apple: -s -k "temp_password" "$KEYCHAIN_PATH"
+          # Tester l'accès au certificat avec différentes approches
+          echo "Essai 1: Mot de passe sans échappement"
+          openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin pass:123456789 || echo "Échec essai 1"
+          
+          echo "Essai 2: Mot de passe avec guillemets simples"
+          openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin 'pass:123456789' || echo "Échec essai 2"
+          
+          echo "Essai 3: Mot de passe sur la ligne de commande"
+          PASS=123456789 openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin env:PASS || echo "Échec essai 3"
+          
+          # Importation manuelle avec openssl puis security
+          echo "Importation avec OpenSSL"
+          openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin pass:123456789 | \
+            security import /dev/stdin -k "$KEYCHAIN_PATH" -t priv -A -T /usr/bin/codesign || echo "Échec importation clé privée"
+          
+          openssl pkcs12 -in certificates/ios_cert.p12 -clcerts -nokeys -passin pass:123456789 | \
+            security import /dev/stdin -k "$KEYCHAIN_PATH" -t cert -A -T /usr/bin/codesign || echo "Échec importation certificat"
+          
+          # Configurer les permissions
+          security set-key-partition-list -S apple-tool:,apple: -s -k "temp_password" "$KEYCHAIN_PATH" || echo "Échec configuration permissions"
           
           # Vérifier l'installation
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          echo "Liste des certificats installés dans le keychain:"
+          security find-identity -p codesigning "$KEYCHAIN_PATH"
+
+      - name: Vérifier que le certificat est installé
+        run: |
+          echo "Liste des certificats installés dans le trousseau temporaire:"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          security find-identity -p codesigning "$KEYCHAIN_PATH"
+          
+          # Si aucun certificat n'est trouvé, afficher une erreur et arrêter le workflow
+          if [[ $(security find-identity -p codesigning "$KEYCHAIN_PATH" | grep -c "valid identities found") == "0 valid identities found" ]]; then
+            echo "❌ Aucun certificat valide n'a été trouvé. Arrêt du workflow."
+            exit 1
+          fi
 
       - name: Copier le profil de provisioning
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          
-          # Analyser le profil pour obtenir son UUID
+          cp certificates/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           UUID=$(security cms -D -i certificates/profile.mobileprovision | plutil -extract UUID xml1 -o - - | plutil -p -)
-          UUID=${UUID//\"/}
           echo "UUID du profil: $UUID"
-          
-          # Renommer le profil avec son UUID
-          cp certificates/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          # Renommer le profil avec son UUID pour assurer qu'Xcode le trouve
+          cp certificates/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${UUID//\"/}.mobileprovision
 
-      - name: Compiler l application Flutter
+      - name: Compiler l application iOS pour App Store
         run: |
           cd project
           flutter build ios --release --no-codesign
+          
+          # Afficher les infos sur le bundle Flutter généré
+          ls -la build/ios/iphoneos
 
       - name: Préparer le projet Xcode avec les bons paramètres de signature
         run: |
@@ -171,18 +213,24 @@ jobs:
               <string>app-store</string>
               <key>signingStyle</key>
               <string>manual</string>
-              <key>teamID</key>
-              <string>${{ secrets.TEAM_ID }}</string>
+              <key>compileBitcode</key>
+              <true/>
+              <key>stripSwiftSymbols</key>
+              <true/>
               <key>provisioningProfiles</key>
               <dict>
                   <key>${{ secrets.APP_BUNDLE_ID }}</key>
                   <string>${PROFILE_UUID}</string>
               </dict>
+              <key>teamID</key>
+              <string>${{ secrets.TEAM_ID }}</string>
               <key>destination</key>
               <string>export</string>
           </dict>
           </plist>
           EOF
+          
+          cat project/ios/ExportOptions.plist
 
       - name: Générer l IPA pour App Store avec Xcode
         run: |
