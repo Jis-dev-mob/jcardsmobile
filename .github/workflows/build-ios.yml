@@ -63,15 +63,15 @@ jobs:
           p12-file-base64: ${{ secrets.IOS_CERTIFICATE_P12 }}
           p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
-          keychain: build.keychain
+          keychain: build-keychain
 
       - name: Vérifier que le certificat est installé
         run: |
           echo "Liste des certificats installés dans le trousseau temporaire:"
-          security find-identity -p codesigning build.keychain
+          security find-identity -p codesigning build-keychain.keychain
           
           # Si aucun certificat n'est trouvé, afficher une erreur et arrêter le workflow
-          if [[ $(security find-identity -p codesigning build.keychain | grep -c "valid identities found") == "0 valid identities found" ]]; then
+          if [[ $(security find-identity -p codesigning build-keychain.keychain | grep -c "valid identities found") == "0 valid identities found" ]]; then
             echo "❌ Aucun certificat valide n'a été trouvé. Arrêt du workflow."
             exit 1
           fi
@@ -132,7 +132,7 @@ jobs:
           cd project/ios
           
           # Afficher l'identité de signature trouvée
-          SIGNING_IDENTITY=$(security find-identity -p codesigning build.keychain | grep "valid identities" -B 1 | head -1 | awk -F '"' '{print $2}')
+          SIGNING_IDENTITY=$(security find-identity -p codesigning build-keychain.keychain | grep "valid identities" -B 1 | head -1 | awk -F '"' '{print $2}')
           echo "Utilisation de l'identité de signature: $SIGNING_IDENTITY"
           
           xcodebuild -workspace Runner.xcworkspace \
