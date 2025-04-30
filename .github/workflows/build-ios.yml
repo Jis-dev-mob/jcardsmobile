@@ -238,18 +238,18 @@ jobs:
           
           # Afficher l'identité de signature trouvée
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
-          SIGNING_IDENTITY=$(security find-identity -p codesigning "$KEYCHAIN_PATH" | grep "iPhone Distribution" | head -1 | sed -E 's/.*\) ([A-F0-9]+) "(.*)"/\2/')
+          SIGNING_IDENTITY=$(security find-identity -p codesigning "$KEYCHAIN_PATH" | grep "valid identities" -B 1 | head -1 | awk -F '"' '{print $2}')
           echo "Utilisation de l'identité de signature: $SIGNING_IDENTITY"
           
-          # Archive
           xcodebuild -workspace Runner.xcworkspace \
             -scheme Runner \
             -sdk iphoneos \
             -configuration Release \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_NAME }}" \
             -allowProvisioningUpdates \
             archive -archivePath build/Runner.xcarchive
-          
-          # Export IPA
+            
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
             -exportPath build/ios \
