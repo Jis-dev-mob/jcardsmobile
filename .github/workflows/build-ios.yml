@@ -43,6 +43,13 @@ jobs:
           cd project
           mkdir -p ios/Runner/Assets.xcassets/AppIcon.appiconset
           
+          # Installer ImageMagick et s'assurer qu'il est disponible dans le PATH
+          brew install imagemagick
+          export PATH="/usr/local/opt/imagemagick/bin:$PATH"
+          
+          # Vérifier que convert est maintenant disponible
+          which convert
+          
           # Créer une copie de l'icône 1024x1024 si elle existe ou générer une icône de base
           if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" ]; then
             echo "Utilisation de l'icône existante comme base"
@@ -50,7 +57,6 @@ jobs:
           else
             echo "Création d'une icône temporaire"
             # Créer une icône de base simple avec ImageMagick
-            brew install imagemagick
             convert -size 1024x1024 xc:blue -fill white -gravity center -pointsize 100 -annotate 0 "App" icon_base.png
           fi
           
@@ -61,14 +67,31 @@ jobs:
           # Mettre à jour le Contents.json pour inclure ces icônes
           cd ios/Runner/Assets.xcassets/AppIcon.appiconset
           
+          # Vérifier que le fichier Contents.json existe
+          if [ ! -f "Contents.json" ]; then
+            echo "Création d'un fichier Contents.json minimal"
+            echo '{"images":[],"info":{"version":1,"author":"xcode"}}' > Contents.json
+          fi
+          
           # Faire une sauvegarde du fichier original
           cp Contents.json Contents.json.bak
           
           # Ajouter les entrées pour les icônes iPad au fichier Contents.json
           python3 -c '
           import json
-          with open("Contents.json", "r") as f:
-              data = json.load(f)
+          import os
+          
+          # Vérifier si le fichier existe
+          if not os.path.exists("Contents.json"):
+              print("Fichier Contents.json introuvable, création...")
+              data = {"images": [], "info": {"version": 1, "author": "xcode"}}
+          else:
+              with open("Contents.json", "r") as f:
+                  try:
+                      data = json.load(f)
+                  except json.JSONDecodeError:
+                      print("Erreur de décodage JSON, réinitialisation du fichier")
+                      data = {"images": [], "info": {"version": 1, "author": "xcode"}}
               
           # Vérifier si les entrées existent déjà
           icons = data.get("images", [])
@@ -357,7 +380,7 @@ jobs:
                 skip_metadata: true,
                 precheck_include_in_app_purchases: false,
                 force: true,
-                submit_for_review: false
+                submit_for_review: true
               )
             end
           end
