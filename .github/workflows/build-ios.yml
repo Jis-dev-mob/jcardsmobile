@@ -51,18 +51,14 @@ jobs:
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
 
-      # Étape pour ajouter les icônes iPad manquantes
+      # Configuration pour s'assurer que toutes les icônes iPad nécessaires sont présentes
       - name: Configurer les icônes iPad nécessaires
         run: |
           cd project
           mkdir -p ios/Runner/Assets.xcassets/AppIcon.appiconset
           
-          # Installer ImageMagick et s'assurer qu'il est disponible dans le PATH
+          # Installer ImageMagick
           brew install imagemagick
-          export PATH="/usr/local/opt/imagemagick/bin:$PATH"
-          
-          # Vérifier que convert est maintenant disponible
-          which convert
           
           # Créer une copie de l'icône 1024x1024 si elle existe ou générer une icône de base
           if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png" ]; then
@@ -70,7 +66,6 @@ jobs:
             cp ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png icon_base.png
           else
             echo "Création d'une icône temporaire"
-            # Créer une icône de base simple avec ImageMagick
             convert -size 1024x1024 xc:blue -fill white -gravity center -pointsize 100 -annotate 0 "App" icon_base.png
           fi
           
@@ -78,63 +73,164 @@ jobs:
           convert icon_base.png -resize 167x167 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-167x167@1x.png
           convert icon_base.png -resize 152x152 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-152x152@1x.png
           
+          # Vérifier si les icônes ont été correctement générées
+          ls -la ios/Runner/Assets.xcassets/AppIcon.appiconset/
+          
           # Mettre à jour le Contents.json pour inclure ces icônes
           cd ios/Runner/Assets.xcassets/AppIcon.appiconset
           
-          # Vérifier que le fichier Contents.json existe
-          if [ ! -f "Contents.json" ]; then
-            echo "Création d'un fichier Contents.json minimal"
-            echo '{"images":[],"info":{"version":1,"author":"xcode"}}' > Contents.json
-          fi
-          
-          # Faire une sauvegarde du fichier original
-          cp Contents.json Contents.json.bak
-          
-          # Ajouter les entrées pour les icônes iPad au fichier Contents.json
-          python3 -c '
-          import json
-          import os
-          
-          # Vérifier si le fichier existe
-          if not os.path.exists("Contents.json"):
-              print("Fichier Contents.json introuvable, création...")
-              data = {"images": [], "info": {"version": 1, "author": "xcode"}}
-          else:
-              with open("Contents.json", "r") as f:
-                  try:
-                      data = json.load(f)
-                  except json.JSONDecodeError:
-                      print("Erreur de décodage JSON, réinitialisation du fichier")
-                      data = {"images": [], "info": {"version": 1, "author": "xcode"}}
-              
-          # Vérifier si les entrées existent déjà
-          icons = data.get("images", [])
-          ipad_167_exists = any(icon.get("size") == "167x167" and icon.get("idiom") == "ipad" for icon in icons)
-          ipad_152_exists = any(icon.get("size") == "152x152" and icon.get("idiom") == "ipad" for icon in icons)
-          
-          # Ajouter les entrées manquantes
-          if not ipad_167_exists:
-              icons.append({
-                  "size": "167x167",
-                  "idiom": "ipad",
-                  "filename": "Icon-App-167x167@1x.png",
-                  "scale": "1x"
-              })
-              
-          if not ipad_152_exists:
-              icons.append({
-                  "size": "152x152",
-                  "idiom": "ipad",
-                  "filename": "Icon-App-152x152@1x.png",
-                  "scale": "1x"
-              })
-          
-          data["images"] = icons
-          
-          with open("Contents.json", "w") as f:
-              json.dump(data, f, indent=2)
-          '
+          # Créer un fichier Contents.json complet si nécessaire
+          cat > Contents.json << 'EOL'
+          {
+            "images" : [
+              {
+                "size" : "20x20",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-20x20@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "20x20",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-20x20@3x.png",
+                "scale" : "3x"
+              },
+              {
+                "size" : "29x29",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-29x29@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "29x29",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-29x29@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "29x29",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-29x29@3x.png",
+                "scale" : "3x"
+              },
+              {
+                "size" : "40x40",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-40x40@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "40x40",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-40x40@3x.png",
+                "scale" : "3x"
+              },
+              {
+                "size" : "60x60",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-60x60@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "60x60",
+                "idiom" : "iphone",
+                "filename" : "Icon-App-60x60@3x.png",
+                "scale" : "3x"
+              },
+              {
+                "size" : "20x20",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-20x20@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "20x20",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-20x20@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "29x29",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-29x29@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "29x29",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-29x29@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "40x40",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-40x40@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "40x40",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-40x40@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "76x76",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-76x76@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "76x76",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-76x76@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "83.5x83.5",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-83.5x83.5@2x.png",
+                "scale" : "2x"
+              },
+              {
+                "size" : "1024x1024",
+                "idiom" : "ios-marketing",
+                "filename" : "Icon-App-1024x1024@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "167x167",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-167x167@1x.png",
+                "scale" : "1x"
+              },
+              {
+                "size" : "152x152",
+                "idiom" : "ipad",
+                "filename" : "Icon-App-152x152@1x.png",
+                "scale" : "1x"
+              }
+            ],
+            "info" : {
+              "version" : 1,
+              "author" : "xcode"
+            }
+          }
+          EOL
 
+          # Générer toutes les icônes manquantes
+          cd ../../../..
+          for size in 20 29 40 60 76 83.5; do
+            if [ "$size" = "83.5" ]; then
+              convert icon_base.png -resize 167x167 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png
+            else
+              convert icon_base.png -resize ${size}x${size} ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@1x.png
+              convert icon_base.png -resize $((size*2))x$((size*2)) ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@2x.png
+              if [ "$size" != "76" ] && [ "$size" != "83.5" ]; then
+                convert icon_base.png -resize $((size*3))x$((size*3)) ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@3x.png
+              fi
+            fi
+          done
+          
       - name: Décrypter le certificat et le profil de provisioning
         run: |
           mkdir -p certificates
