@@ -8,10 +8,19 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14 # macOS 14 avec Xcode 16.x pour iOS 18 SDK
+    runs-on: macos-14
 
     steps:
-      - name: Vérifier la version d'Xcode
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: List available Xcode versions
+        run: ls /Applications
+
+      - name: Set up Xcode 16.0
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+        
+      - name: Vérifier la version de Xcode
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
@@ -44,21 +53,26 @@ jobs:
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
 
-      # Configuration pour s'assurer que toutes les icônes iPad nécessaires sont présentes
+      # Étape pour ajouter les icônes iPad manquantes
       - name: Configurer les icônes iPad nécessaires
         run: |
           cd project
           mkdir -p ios/Runner/Assets.xcassets/AppIcon.appiconset
           
-          # Installer ImageMagick
+          # Installer ImageMagick et s'assurer qu'il est disponible dans le PATH
           brew install imagemagick
+          export PATH="/usr/local/opt/imagemagick/bin:$PATH"
+          
+          # Vérifier que convert est maintenant disponible
+          which convert
           
           # Créer une copie de l'icône 1024x1024 si elle existe ou générer une icône de base
-          if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" ]; then
+          if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png" ]; then
             echo "Utilisation de l'icône existante comme base"
-            cp ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png icon_base.png
+            cp ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png icon_base.png
           else
             echo "Création d'une icône temporaire"
+            # Créer une icône de base simple avec ImageMagick
             convert -size 1024x1024 xc:blue -fill white -gravity center -pointsize 100 -annotate 0 "App" icon_base.png
           fi
           
@@ -66,169 +80,69 @@ jobs:
           convert icon_base.png -resize 167x167 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-167x167@1x.png
           convert icon_base.png -resize 152x152 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-152x152@1x.png
           
-          # Vérifier si les icônes ont été correctement générées
-          ls -la ios/Runner/Assets.xcassets/AppIcon.appiconset/
-          
           # Mettre à jour le Contents.json pour inclure ces icônes
           cd ios/Runner/Assets.xcassets/AppIcon.appiconset
           
-          # Créer un fichier Contents.json complet si nécessaire
-          cat > Contents.json << 'EOL'
-          {
-            "images" : [
-              {
-                "size" : "20x20",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-20x20@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "20x20",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-20x20@3x.png",
-                "scale" : "3x"
-              },
-              {
-                "size" : "29x29",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-29x29@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "29x29",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-29x29@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "29x29",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-29x29@3x.png",
-                "scale" : "3x"
-              },
-              {
-                "size" : "40x40",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-40x40@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "40x40",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-40x40@3x.png",
-                "scale" : "3x"
-              },
-              {
-                "size" : "60x60",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-60x60@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "60x60",
-                "idiom" : "iphone",
-                "filename" : "Icon-App-60x60@3x.png",
-                "scale" : "3x"
-              },
-              {
-                "size" : "20x20",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-20x20@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "20x20",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-20x20@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "29x29",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-29x29@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "29x29",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-29x29@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "40x40",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-40x40@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "40x40",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-40x40@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "76x76",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-76x76@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "76x76",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-76x76@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "83.5x83.5",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-83.5x83.5@2x.png",
-                "scale" : "2x"
-              },
-              {
-                "size" : "1024x1024",
-                "idiom" : "ios-marketing",
-                "filename" : "Icon-App-1024x1024@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "167x167",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-167x167@1x.png",
-                "scale" : "1x"
-              },
-              {
-                "size" : "152x152",
-                "idiom" : "ipad",
-                "filename" : "Icon-App-152x152@1x.png",
-                "scale" : "1x"
-              }
-            ],
-            "info" : {
-              "version" : 1,
-              "author" : "xcode"
-            }
-          }
-          EOL
-
-          # Générer toutes les icônes manquantes
-          cd ../../../..
-          for size in 20 29 40 60 76 83.5; do
-            if [ "$size" = "83.5" ]; then
-              convert icon_base.png -resize 167x167 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png
-            else
-              convert icon_base.png -resize ${size}x${size} ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@1x.png
-              convert icon_base.png -resize $((size*2))x$((size*2)) ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@2x.png
-              if [ "$size" != "76" ] && [ "$size" != "83.5" ]; then
-                convert icon_base.png -resize $((size*3))x$((size*3)) ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${size}x${size}@3x.png
-              fi
-            fi
-          done
+          # Vérifier que le fichier Contents.json existe
+          if [ ! -f "Contents.json" ]; then
+            echo "Création d'un fichier Contents.json minimal"
+            echo '{"images":[],"info":{"version":1,"author":"xcode"}}' > Contents.json
+          fi
+          
+          # Faire une sauvegarde du fichier original
+          cp Contents.json Contents.json.bak
+          
+          # Ajouter les entrées pour les icônes iPad au fichier Contents.json
+          python3 -c '
+          import json
+          import os
+          
+          # Vérifier si le fichier existe
+          if not os.path.exists("Contents.json"):
+              print("Fichier Contents.json introuvable, création...")
+              data = {"images": [], "info": {"version": 1, "author": "xcode"}}
+          else:
+              with open("Contents.json", "r") as f:
+                  try:
+                      data = json.load(f)
+                  except json.JSONDecodeError:
+                      print("Erreur de décodage JSON, réinitialisation du fichier")
+                      data = {"images": [], "info": {"version": 1, "author": "xcode"}}
+              
+          # Vérifier si les entrées existent déjà
+          icons = data.get("images", [])
+          ipad_167_exists = any(icon.get("size") == "167x167" and icon.get("idiom") == "ipad" for icon in icons)
+          ipad_152_exists = any(icon.get("size") == "152x152" and icon.get("idiom") == "ipad" for icon in icons)
+          
+          # Ajouter les entrées manquantes
+          if not ipad_167_exists:
+              icons.append({
+                  "size": "167x167",
+                  "idiom": "ipad",
+                  "filename": "Icon-App-167x167@1x.png",
+                  "scale": "1x"
+              })
+              
+          if not ipad_152_exists:
+              icons.append({
+                  "size": "152x152",
+                  "idiom": "ipad",
+                  "filename": "Icon-App-152x152@1x.png",
+                  "scale": "1x"
+              })
+          
+          data["images"] = icons
+          
+          with open("Contents.json", "w") as f:
+              json.dump(data, f, indent=2)
+          '
 
       - name: Décrypter le certificat et le profil de provisioning
         run: |
           mkdir -p certificates
           
           # Méthode différente de décodage pour le certificat
+          # Ajouter une ligne vide à la fin pour assurer un décodage complet
           echo "${{ secrets.IOS_CERTIFICATE_P12 }}" > cert_base64.txt
           cat cert_base64.txt | base64 -d > certificates/ios_cert.p12
           
@@ -239,7 +153,19 @@ jobs:
           ls -la certificates/
           echo "Taille du certificat P12: $(wc -c < certificates/ios_cert.p12) octets"
           echo "Taille du profil de provisioning: $(wc -c < certificates/profile.mobileprovision) octets"
+          
+          # Analyser le format du fichier P12
+          file certificates/ios_cert.p12
 
+      - name: Vérifier l intégrité du certificat
+        run: |
+          # Vérifier si le fichier est un certificat P12 valide
+          file certificates/ios_cert.p12
+          
+          # Tester avec OpenSSL pour voir si le certificat est lisible
+          openssl pkcs12 -info -in certificates/ios_cert.p12 -nokeys -passin pass:123456789 -nocerts || echo "⚠️ Impossible de lire le certificat avec le mot de passe"
+
+      # Approche alternative pour l'import du certificat
       - name: Installer le certificat manuellement
         run: |
           # Créer un nouveau keychain
@@ -251,6 +177,16 @@ jobs:
           # Rendre le keychain actif et configurer pour ne pas demander de confirmation
           security list-keychains -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
           security default-keychain -s "$KEYCHAIN_PATH"
+          
+          # Tester l'accès au certificat avec différentes approches
+          echo "Essai 1: Mot de passe sans échappement"
+          openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin pass:123456789 || echo "Échec essai 1"
+          
+          echo "Essai 2: Mot de passe avec guillemets simples"
+          openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin 'pass:123456789' || echo "Échec essai 2"
+          
+          echo "Essai 3: Mot de passe sur la ligne de commande"
+          PASS=123456789 openssl pkcs12 -in certificates/ios_cert.p12 -nocerts -nodes -passin env:PASS || echo "Échec essai 3"
           
           # Importation manuelle avec openssl puis security
           echo "Importation avec OpenSSL"
@@ -269,6 +205,7 @@ jobs:
 
       - name: Vérifier que le certificat est installé
         run: |
+          echo "Liste des certificats installés dans le trousseau temporaire:"
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
           security find-identity -p codesigning "$KEYCHAIN_PATH"
           
@@ -401,7 +338,7 @@ jobs:
           
           cat project/ios/ExportOptions.plist
 
-      - name: Générer l'IPA pour App Store avec Xcode 16
+      - name: Générer IPA pour App Store avec Xcode 16
         run: |
           cd project/ios
           
