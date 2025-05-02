@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14 # Utilisation de macos-14 pour accéder à Xcode 16.x avec iOS 18 SDK
 
     steps:
       - name: Installer SVN
@@ -36,6 +36,67 @@ jobs:
           cd project/ios
           sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
           pod install --repo-update
+
+      # Étape pour ajouter les icônes iPad manquantes
+      - name: Configurer les icônes iPad nécessaires
+        run: |
+          cd project
+          mkdir -p ios/Runner/Assets.xcassets/AppIcon.appiconset
+          
+          # Créer une copie de l'icône 1024x1024 si elle existe ou générer une icône de base
+          if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" ]; then
+            echo "Utilisation de l'icône existante comme base"
+            cp ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png icon_base.png
+          else
+            echo "Création d'une icône temporaire"
+            # Créer une icône de base simple avec ImageMagick
+            brew install imagemagick
+            convert -size 1024x1024 xc:blue -fill white -gravity center -pointsize 100 -annotate 0 "App" icon_base.png
+          fi
+          
+          # Redimensionner pour les tailles requises pour iPad
+          convert icon_base.png -resize 167x167 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-167x167@1x.png
+          convert icon_base.png -resize 152x152 ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-152x152@1x.png
+          
+          # Mettre à jour le Contents.json pour inclure ces icônes
+          cd ios/Runner/Assets.xcassets/AppIcon.appiconset
+          
+          # Faire une sauvegarde du fichier original
+          cp Contents.json Contents.json.bak
+          
+          # Ajouter les entrées pour les icônes iPad au fichier Contents.json
+          python3 -c '
+          import json
+          with open("Contents.json", "r") as f:
+              data = json.load(f)
+              
+          # Vérifier si les entrées existent déjà
+          icons = data.get("images", [])
+          ipad_167_exists = any(icon.get("size") == "167x167" and icon.get("idiom") == "ipad" for icon in icons)
+          ipad_152_exists = any(icon.get("size") == "152x152" and icon.get("idiom") == "ipad" for icon in icons)
+          
+          # Ajouter les entrées manquantes
+          if not ipad_167_exists:
+              icons.append({
+                  "size": "167x167",
+                  "idiom": "ipad",
+                  "filename": "Icon-App-167x167@1x.png",
+                  "scale": "1x"
+              })
+              
+          if not ipad_152_exists:
+              icons.append({
+                  "size": "152x152",
+                  "idiom": "ipad",
+                  "filename": "Icon-App-152x152@1x.png",
+                  "scale": "1x"
+              })
+          
+          data["images"] = icons
+          
+          with open("Contents.json", "w") as f:
+              json.dump(data, f, indent=2)
+          '
 
       - name: Décrypter le certificat et le profil de provisioning
         run: |
