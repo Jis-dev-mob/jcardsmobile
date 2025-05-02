@@ -296,7 +296,7 @@ jobs:
                 skip_metadata: true,
                 precheck_include_in_app_purchases: false,
                 force: true,
-                submit_for_review: true
+                submit_for_review: false
               )
             end
           end
