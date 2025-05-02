@@ -24,8 +24,6 @@ jobs:
         run: |
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
-          # S'assurer d'utiliser Xcode 16.x
-          sudo xcode-select -s /Applications/Xcode.app
 
       - name: Installer SVN
         run: |
@@ -316,7 +314,7 @@ jobs:
           <plist version="1.0">
           <dict>
               <key>method</key>
-              <string>app-store</string>
+              <string>app-store-connect</string>
               <key>signingStyle</key>
               <string>manual</string>
               <key>compileBitcode</key>
@@ -372,15 +370,37 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys/
           echo "${{ secrets.APPSTORE_API_PRIVATE_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey.p8
+          
+      - name: Sauvegarder IPA en artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-appstore-ipa
+          path: project/ios/build/ios/*.ipa
+          compression-level: 0
 
+      - name: Vérifier l existence de l IPA
+        run: |
+          # Vérifier si l'IPA a été généré
+          IPA_PATH=$(find project/ios/build/ios -name "*.ipa" -type f | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "⚠️ Aucun fichier IPA n'a été trouvé!"
+            echo "Contenu du répertoire de build:"
+            ls -la project/ios/build/ios/
+            exit 1
+          else
+            echo "✅ IPA trouvé: $IPA_PATH"
+            echo "Taille: $(wc -c < "$IPA_PATH") octets"
+          fi
+      
       - name: Soumettre IPA à App Store Connect avec fastlane
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          IPA_PATH: "$IPA_PATH"
         run: |
-          # Obtenir le chemin de l'IPA généré
-          IPA_PATH=$(find project/ios/build/ios -name "*.ipa" -type f | head -1)
-          echo "Chemin de l'IPA: $IPA_PATH"
+          # Obtenir le chemin absolu de l'IPA généré
+          IPA_PATH=$(find "$(pwd)/project/ios/build/ios" -name "*.ipa" -type f | head -1)
+          echo "Chemin absolu de l'IPA: $IPA_PATH"
           
           # Installer fastlane
           gem install fastlane
@@ -399,15 +419,16 @@ jobs:
                 key_filepath: "~/.appstoreconnect/private_keys/AuthKey.p8",
               )
               
-              # Afficher des informations sur le fichier IPA
-              puts "Vérification de l'IPA: #{ENV['IPA_PATH']}"
-              puts "Le fichier existe: #{File.exist?(ENV['IPA_PATH'])}"
-              puts "Taille du fichier: #{File.size(ENV['IPA_PATH'])} octets"
+              # Utiliser directement la variable d'environnement
+              ipa_path = ENV["IPA_PATH"]
+              puts "Vérification de l'IPA: #{ipa_path}"
+              puts "Le fichier existe: #{File.exist?(ipa_path)}"
+              puts "Taille du fichier: #{File.size(ipa_path)} octets"
               
               # Uploader vers App Store Connect avec reporting complet
               upload_to_app_store(
                 api_key: api_key,
-                ipa: ENV["IPA_PATH"],
+                ipa: ipa_path,
                 skip_screenshots: true,
                 skip_metadata: true,
                 precheck_include_in_app_purchases: false,
@@ -421,10 +442,3 @@ jobs:
           
           # Exécuter fastlane pour l'upload
           IPA_PATH="$IPA_PATH" fastlane upload
-          
-      - name: Sauvegarder IPA en artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-appstore-ipa
-          path: project/ios/build/ios/*.ipa
-          compression-level: 0
