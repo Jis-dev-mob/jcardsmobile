@@ -486,7 +486,17 @@ jobs:
           else
             echo "✅ IPA trouvé: $IPA_PATH"
             echo "Taille: $(wc -c < "$IPA_PATH") octets"
+            # Exporter le chemin de l'IPA pour l'étape suivante
+            echo "IPA_PATH=$IPA_PATH" >> $GITHUB_ENV
           fi
+
+      - name: Upload app to TestFlight
+        uses: apple-actions/upload-testflight-build@v3
+        with:
+          app-path: ${{ env.IPA_PATH }}
+          issuer-id: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
       
       - name: Soumettre IPA à App Store Connect avec fastlane
         env:
