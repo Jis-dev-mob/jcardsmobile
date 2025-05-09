@@ -497,12 +497,6 @@ jobs:
           issuer-id: ${{ secrets.APPSTORE_API_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-
-      - name: Log TestFlight upload result
-        run: |
-          echo "Résultat du téléchargement TestFlight: ${{ steps.testflight_upload.outputs.result }}"
-          echo "ID de build: ${{ steps.testflight_upload.outputs.build-number }}"
-          echo "URL du build: ${{ steps.testflight_upload.outputs.build-url }}"
       
       # - name: Soumettre IPA à App Store Connect avec fastlane
       #   env:
