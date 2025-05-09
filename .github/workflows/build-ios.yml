@@ -497,54 +497,60 @@ jobs:
           issuer-id: ${{ secrets.APPSTORE_API_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-      
-      - name: Soumettre IPA à App Store Connect avec fastlane
-        env:
-          APPLE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-          APPLE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
-          IPA_PATH: "$IPA_PATH"
+
+      - name: Log TestFlight upload result
         run: |
-          # Obtenir le chemin absolu de l'IPA généré
-          IPA_PATH=$(find "$(pwd)/project/ios/build/ios" -name "*.ipa" -type f | head -1)
-          echo "Chemin absolu de l'IPA: $IPA_PATH"
+          echo "Résultat du téléchargement TestFlight: ${{ steps.testflight_upload.outputs.result }}"
+          echo "ID de build: ${{ steps.testflight_upload.outputs.build-number }}"
+          echo "URL du build: ${{ steps.testflight_upload.outputs.build-url }}"
+      
+      # - name: Soumettre IPA à App Store Connect avec fastlane
+      #   env:
+      #     APPLE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      #     APPLE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      #     IPA_PATH: "$IPA_PATH"
+      #   run: |
+      #     # Obtenir le chemin absolu de l'IPA généré
+      #     IPA_PATH=$(find "$(pwd)/project/ios/build/ios" -name "*.ipa" -type f | head -1)
+      #     echo "Chemin absolu de l'IPA: $IPA_PATH"
           
-          # Installer fastlane
-          gem install fastlane
+      #     # Installer fastlane
+      #     gem install fastlane
           
-          # Créer un Fastfile temporaire avec configuration améliorée
-          mkdir -p fastlane
-          cat > fastlane/Fastfile << 'EOF'
-          default_platform(:ios)
+      #     # Créer un Fastfile temporaire avec configuration améliorée
+      #     mkdir -p fastlane
+      #     cat > fastlane/Fastfile << 'EOF'
+      #     default_platform(:ios)
           
-          platform :ios do
-            desc "Soumettre à l'App Store"
-            lane :upload do
-              api_key = app_store_connect_api_key(
-                key_id: ENV["APPLE_API_KEY_ID"],
-                issuer_id: ENV["APPLE_API_ISSUER_ID"],
-                key_filepath: "~/.appstoreconnect/private_keys/AuthKey.p8",
-              )
+      #     platform :ios do
+      #       desc "Soumettre à l'App Store"
+      #       lane :upload do
+      #         api_key = app_store_connect_api_key(
+      #           key_id: ENV["APPLE_API_KEY_ID"],
+      #           issuer_id: ENV["APPLE_API_ISSUER_ID"],
+      #           key_filepath: "~/.appstoreconnect/private_keys/AuthKey.p8",
+      #         )
               
-              # Utiliser directement la variable d'environnement
-              ipa_path = ENV["IPA_PATH"]
-              puts "Vérification de l'IPA: #{ipa_path}"
-              puts "Le fichier existe: #{File.exist?(ipa_path)}"
-              puts "Taille du fichier: #{File.size(ipa_path)} octets"
+      #         # Utiliser directement la variable d'environnement
+      #         ipa_path = ENV["IPA_PATH"]
+      #         puts "Vérification de l'IPA: #{ipa_path}"
+      #         puts "Le fichier existe: #{File.exist?(ipa_path)}"
+      #         puts "Taille du fichier: #{File.size(ipa_path)} octets"
               
-              # Uploader vers App Store Connect avec reporting complet
-              upload_to_app_store(
-                api_key: api_key,
-                ipa: ipa_path,
-                skip_screenshots: true,
-                skip_metadata: true,
-                precheck_include_in_app_purchases: false,
-                force: true,
-                submit_for_review: false,
-                verbose: true
-              )
-            end
-          end
-          EOF
+      #         # Uploader vers App Store Connect avec reporting complet
+      #         upload_to_app_store(
+      #           api_key: api_key,
+      #           ipa: ipa_path,
+      #           skip_screenshots: true,
+      #           skip_metadata: true,
+      #           precheck_include_in_app_purchases: false,
+      #           force: true,
+      #           submit_for_review: false,
+      #           verbose: true
+      #         )
+      #       end
+      #     end
+      #     EOF
           
-          # Exécuter fastlane pour l'upload
-          IPA_PATH="$IPA_PATH" fastlane upload
+      #     # Exécuter fastlane pour l'upload
+      #     IPA_PATH="$IPA_PATH" fastlane upload
