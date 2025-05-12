@@ -1,4 +1,4 @@
-name: Webcrm test env:iOS IPA Build for App Store
+name: Webcrm test env:iOS IPA Build for App Store and upload
 
 on:
   push:
