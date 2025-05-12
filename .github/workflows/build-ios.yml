@@ -34,24 +34,6 @@ jobs:
           echo "Téléchargement du code depuis SVN..."
           svn checkout --username "${{ secrets.SVN_USERNAME }}" --password "${{ secrets.SVN_PASSWORD }}" https://svn.jiscomputing.com/crmconnect_mobile/ project
 
-      - name: Installer Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 3.24.1
-          architecture: x64
-
-      - name: Installer les dépendances Flutter
-        run: |
-          cd project
-          flutter pub get
-
-      - name: Corriger la version minimale iOS
-        run: |
-          cd project/ios
-          sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
-          pod install --repo-update
-
-      # Configuration pour s'assurer que toutes les icônes iPad nécessaires sont présentes
       - name: Configurer les icônes iPad nécessaires
         run: |
           cd project
@@ -85,9 +67,6 @@ jobs:
           if [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png" ]; then
             echo "Utilisation de l'icône existante comme base"
             cp ios/Runner/Assets.xcassets/AppIcon.appiconset/1024.png icon_base.png
-          elif [ -f "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" ]; then
-            echo "Utilisation de l'icône Icon-App-1024x1024@1x.png comme base"
-            cp ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png icon_base.png
           else
             echo "Création d'une icône temporaire"
             $CONVERT_CMD -size 1024x1024 xc:blue -fill white -gravity center -pointsize 100 -annotate 0 "App" icon_base.png
@@ -260,6 +239,41 @@ jobs:
 
           # Vérifier si les icônes ont été correctement générées une deuxième fois et contents.json
           ls -la ios/Runner/Assets.xcassets/AppIcon.appiconset/
+
+      - name: Archiver le dossier des icônes
+        run: |
+          cd project
+          # Créer une archive ZIP du dossier des icônes
+          zip -r app_icons.zip ios/Runner/Assets.xcassets/AppIcon.appiconset/
+          echo "Archive créée avec succès"
+          ls -la app_icons.zip
+      
+      - name: Télécharger l'archive des icônes
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-icons
+          path: project/app_icons.zip
+          retention-days: 3
+          
+      # - name: Installer Flutter
+      #   uses: subosito/flutter-action@v2
+      #   with:
+      #     flutter-version: 3.24.1
+      #     architecture: x64
+
+      # - name: Installer les dépendances Flutter
+      #   run: |
+      #     cd project
+      #     flutter pub get
+
+      # - name: Corriger la version minimale iOS
+      #   run: |
+      #     cd project/ios
+      #     sed -i '' 's/platform :ios, '9.0'/platform :ios, '12.0'/' Podfile
+      #     pod install --repo-update
+
+      # Configuration pour s'assurer que toutes les icônes iPad nécessaires sont présentes
+      ###
           
       # - name: Décrypter le certificat et le profil de provisioning
       #   run: |
