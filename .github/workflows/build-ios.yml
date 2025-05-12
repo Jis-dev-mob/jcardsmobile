@@ -249,7 +249,7 @@ jobs:
           ls -la app_icons.zip
       
       - name: Télécharger l'archive des icônes
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-icons
           path: project/app_icons.zip
